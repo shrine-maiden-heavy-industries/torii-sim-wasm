@@ -1,0 +1,164 @@
+# SPDX-License-Identifier: BSD-2-Clause
+[project]
+name = 'torii-sim-wasm'
+description = 'A WASM based simulation backend for Torii'
+authors = [
+    { name = 'Torii Contributors' },
+]
+dynamic = ['version']
+license = 'BSD-2-Clause'
+license-files = ['LICENSE', 'LICENSE.docs']
+readme = 'README.md'
+requires-python = '>=3.11'
+dependencies = [
+    'torii>=0.8.1,<1',
+    # NOTE(aki): Version constrained by `torii`
+    'pyvcd'
+]
+keywords = [
+    'Torii',
+    'Simulation',
+    'WASM',
+]
+classifiers = [
+	'Development Status :: 4 - Beta',
+
+	'Intended Audience :: Developers',
+	'Intended Audience :: Education',
+	'Intended Audience :: Information Technology',
+	'Intended Audience :: Science/Research',
+
+	'Operating System :: MacOS :: MacOS X',
+	'Operating System :: Microsoft :: Windows',
+	'Operating System :: POSIX :: Linux',
+
+	'Programming Language :: Python :: 3.11',
+	'Programming Language :: Python :: 3.12',
+	'Programming Language :: Python :: 3.13',
+	'Programming Language :: Python :: 3.14',
+
+	'Programming Language :: Python :: Implementation :: CPython',
+	'Programming Language :: Python :: Implementation :: PyPy',
+
+	'Topic :: Scientific/Engineering',
+	'Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)',
+	'Topic :: Software Development',
+	'Topic :: Software Development :: Embedded Systems',
+	'Topic :: Software Development :: Libraries',
+
+	'Typing :: Typed',
+]
+
+[project.optional-dependencies]
+dev = ['nox']
+
+[project.urls]
+source = 'https://github.com/shrine-maiden-heavy-industries/torii-sim-wasm'
+issues = 'https://github.com/shrine-maiden-heavy-industries/torii-sim-wasm/issues'
+# TODO(aki): Figure out if this will be part of the main Torii docs or not
+# documentation = ''
+# changelog = ''
+
+[build-system]
+requires = ['maturin>=1.9,<2.0']
+build-backend = 'maturin'
+
+[tool.maturin]
+python-source = 'python'
+module-name = 'torii_sim_wasm._wasm_engine'
+
+# Testing Coverage
+[tool.coverage.run]
+branch = true
+omit = [
+	'*/noxfile.py',
+	'*/__main__.py',
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+	':nocov:',
+	# Allow defensive code
+	'^\s*raise AssertionError\b',
+	'^\s*raise NotImplementedError\b',
+	'^\s*raise NotImplemented\b',
+	'^\s*raise$',
+	# Typing-Related
+	'^\s*if (False|TYPE_CHECKING):',
+	': \.\.\.(\s*#.*)?$',
+	'^ +\.\.\.$',
+	'''-> ['"]?NoReturn['"]?:''',
+	# Skipped/Failed tests
+	'^\s*self\.skipTest\b',
+	'^\s*self\.fail\b',
+]
+partial_branches = [
+	':nobr:',
+	'''^if __name__ == ['"]__main__['"]:$''',
+]
+
+# Typechecking
+[tool.pyright]
+include = [
+	'python/torii_sim_wasm', 'python/tests'
+]
+exclude = [
+	'**/__pycache__', '.nox', 'build', '.github', '.eggs', '*.egg-info'
+]
+
+[tool.mypy]
+warn_return_any = true
+warn_unused_configs = true
+allow_redefinition = true
+check_untyped_defs = true
+
+# Code Formatting
+[tool.ruff]
+cache-dir = 'build/.ruff_cache'
+src = [
+	'python/torii_sim_wasm', 'python/tests'
+]
+indent-width = 4
+line-length = 120
+respect-gitignore = true
+target-version = 'py311'
+
+# NOTE(aki):
+# We can't use the Ruff formatter as is, and they refuse to add support for single quotes
+# on docstring, among some other things, so this is just mostly here for reference.
+[tool.ruff.format]
+docstring-code-format = true
+indent-style = 'tab'
+line-ending = 'lf'
+# Due to Ruff being stupid and not letting us use `'''` we have to use this
+quote-style = 'preserve'
+
+[tool.ruff.lint]
+select = ['E', 'F', 'W']
+# NOTE(aki):
+# Commented out ignores are not supported by Ruff but are by Flake8,
+# they are present in `contrib/.flake8`.
+ignore = [
+	# 'E126', # Continuation line over-indented for hanging indent
+	'E201', # Whitespace after '('
+	'E202', # Whitespace before ')'
+	'E221', # Multiple spaces before operator
+	'E241', # Multiple spaces after ','
+	'E251', # Unexpected spaces around keyword / parameter equals
+	'E261', # At least two spaces before inline comment
+	'E272', # Multiple spaces before keyword
+	'E302', # Expected 2 blank lines, found n
+	'E305', # Expected 2 blank lines after end of function or class
+	'W191', # Indentation contains tabs
+	# 'W504', # line break after binary operator
+]
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = 'single'
+inline-quotes  = 'single'
+multiline-quotes = 'single'
+
+[tool.ruff.lint.isort]
+lines-after-imports = 1

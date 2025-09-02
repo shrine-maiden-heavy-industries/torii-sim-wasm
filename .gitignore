@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: BSD-2-Clause
+
+/target
+/build
+
+# Python
+__pycache__/
+*.py[codz]
+*.egg-info/
+*.eggs/
+.venv/
+.env/
+.nox/
+.mypy_cache/
+.ruff_cache/
+
+# Rust Module
+*.dll
+*.so
+*.dylib
+
+# Coverage Artifacts
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Test Artifacts
+tests/**/spec_*/
+*.vcd
+*.fst
+*.ghw
+*.ftr
+*.gtkw
+*.surf.ron
+
+# Miscellaneous Artifacts
+*.wat
+*.il
+*.v
+*.sv
+*.vhd
+*.vhdl
+
+# Code Editors/IDEs
+*.code-workspace
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json

@@ -1,0 +1,9 @@
+{
+	"recommendations": [
+		"ms-python.python",
+		"ms-python.flake8",
+		"ms-python.vscode-pylance",
+		"rust-lang.rust-analyzer",
+		"tamasfe.even-better-toml",
+	]
+}
