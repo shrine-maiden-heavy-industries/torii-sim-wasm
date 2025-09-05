@@ -74,7 +74,74 @@ class _RHSValueCompiler(_ValueCompiler):
 		raise NotImplementedError # :nocov:
 
 	def on_Operator(self, value):
-		raise NotImplementedError # :nocov:
+		def mask(value):
+			value_mask = (1 << len(value)) - 1
+			return f'(i64.and (i64.const {value_mask:#x}) {self(value)})'
+
+		def sign(value):
+			if value.shape().signed:
+				return f'(call $sign {mask(value)} (i64.const {-1 << (len(value) - 1):#x}))'
+			else: # unsigned
+				return mask(value)
+			return mask(value)
+
+		if len(value.operands) == 1:
+			arg, = value.operands
+			if value.operator == '~':
+				return f'(i64.xor {mask(arg)} (i64.const 0xffffffffffffffff))'
+			if value.operator == '-':
+				return f'(i64.mul {sign(arg)} (i64.const -1))'
+			if value.operator == 'b':
+				return f'(i64.extend_i32_u (i64.gt_u {mask(arg)} (i64.const 0)))'
+			if value.operator == 'r|':
+				return f'(i64.extend_i32_u (i64.ne {mask(arg)} (i64.const 0)))'
+			if value.operator == 'r&':
+				return f'(i64.extend_i32_u (i64.eq {mask(arg)} (i64.const {(1 << len(arg)) - 1})))'
+			if value.operator == 'r^':
+				return f'(i64.rem_u (i64.popcnt {mask(arg)}) (i64.const 2))'
+			if value.operator in ('u', 's'):
+				# These operators don't change the bit pattern, only its interpretation.
+				return self(arg)
+		elif len(value.operands) == 2:
+			lhs, rhs = value.operands
+			if value.operator == '+':
+				return f'(i64.add {sign(lhs)} {sign(rhs)})'
+			if value.operator == '-':
+				return f'(i64.sub {sign(lhs)} {sign(rhs)})'
+			if value.operator == '*':
+				return f'(i64.mul {sign(lhs)} {sign(rhs)})'
+			if value.operator == '//':
+				return f'(call $zdiv {sign(lhs)} {sign(rhs)})'
+			if value.operator == '%':
+				return f'(call $zmod {sign(lhs)} {sign(rhs)})'
+			if value.operator == '&':
+				return f'(i64.and {sign(lhs)} {sign(rhs)})'
+			if value.operator == '|':
+				return f'(i64.or {sign(lhs)} {sign(rhs)})'
+			if value.operator == '^':
+				return f'(i64.xor {sign(lhs)} {sign(rhs)})'
+			if value.operator == '<<':
+				return f'(i64.shl {sign(lhs)} {sign(rhs)})'
+			if value.operator == '>>':
+				return f'(i64.shr_u {sign(lhs)} {sign(rhs)})'
+			if value.operator == '!=':
+				# i64.eq will push i32 into a stack so we need to extend it to i64
+				return f'(i64.extend_i32_u (i64.ne {sign(lhs)} {sign(rhs)}))'
+			if value.operator == '<':
+				return f'(i64.extend_i32_u (i64.lt_s {sign(lhs)} {sign(rhs)}))'
+			if value.operator == '<=':
+				return f'(i64.extend_i32_u (i64.le_s {sign(lhs)} {sign(rhs)}))'
+			if value.operator == '>':
+				return f'(i64.extend_i32_u (i64.gt_s {sign(lhs)} {sign(rhs)}))'
+			if value.operator == '>=':
+				return f'(i64.extend_i32_u (i64.ge_s {sign(lhs)} {sign(rhs)}))'
+			if value.operator == '==':
+				return f'(i64.extend_i32_u (i64.eq {sign(lhs)} {sign(rhs)}))'
+		elif len(value.operands) == 3:
+			if value.operator == 'm':
+				sel, val1, val0 = value.operands
+				return f'(if (result i64) (i64.gt_u {mask(sel)} (i64.const 0)) (then {sign(val1)}) (else {sign(val0)}))'
+		raise NotImplementedError(f'Operator \'{value.operator}\' not implemented') # :nocov:
 
 	def on_Slice(self, value):
 		raise NotImplementedError # :nocov:
