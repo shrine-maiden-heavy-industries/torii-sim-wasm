@@ -211,7 +211,17 @@ class _RHSValueCompiler(_ValueCompiler):
 		return f'(i64.and (i64.const {(1 << value.width) - 1}) (i64.shr_u {self(value.value)} {offset}))'
 
 	def on_Cat(self, value):
-		raise NotImplementedError # :nocov:
+		gen_parts = []
+		offset = 0
+		for part in value.parts:
+			part_mask = (1 << len(part)) - 1
+			gen_parts.append(f'(i64.shl (i64.and (i64.const {part_mask:#x}) {self(part)}) (i64.const {offset}))')
+			offset += len(part)
+
+		# we have to nest the or statements so time to do annoying paren stuff
+		if gen_parts:
+			return f'{"(i64.or ".join(gen_parts)}{")" * (len(gen_parts) - 1)}'
+		return '(i64.const 0)'
 
 	def on_ArrayProxy(self, value):
 		raise NotImplementedError # :nocov:
@@ -276,7 +286,15 @@ class _LHSValueCompiler(_ValueCompiler):
 		return gen
 
 	def on_Cat(self, value):
-		raise NotImplementedError # :nocov:
+		def gen(arg):
+			gen_arg = self.emitter.def_var('cat', arg)
+			offset = 0
+			for part in value.parts:
+				part_mask = (1 << len(part)) - 1
+				part_shift = f'(i64.shr_u (local.get ${gen_arg}) (i64.const {offset}))'
+				self(part)(f'(i64.and (i64.const {part_mask:#x}) {part_shift})')
+				offset += len(part)
+		return gen
 
 	def on_ArrayProxy(self, value):
 		raise NotImplementedError # :nocov:
