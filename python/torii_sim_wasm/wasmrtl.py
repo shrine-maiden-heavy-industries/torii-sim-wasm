@@ -202,7 +202,8 @@ class _RHSValueCompiler(_ValueCompiler):
 		raise NotImplementedError(f'Operator \'{value.operator}\' not implemented') # :nocov:
 
 	def on_Slice(self, value):
-		raise NotImplementedError # :nocov:
+		and_shift = f'(i64.shr_u {self(value.value)} (i64.const {value.start}))'
+		return f'(i64.and (i64.const {(1 << len(value)) - 1:#x}) {and_shift})'
 
 	def on_Part(self, value):
 		offset_mask = (1 << len(value.offset)) - 1
@@ -248,7 +249,16 @@ class _LHSValueCompiler(_ValueCompiler):
 		raise NotImplementedError # :nocov:
 
 	def on_Slice(self, value):
-		raise NotImplementedError # :nocov:
+		def gen(arg):
+			width_mask = (1 << (value.stop - value.start)) - 1
+			self(value.value)(
+				f'(i64.or '
+				f'(i64.and {self.lrhs(value.value)} '
+				f'(i64.const {~(width_mask << value.start):#x})) '
+				f'(i64.shl (i64.and (i64.const {width_mask:#x}) {arg}) (i64.const {value.start}))'
+				f')'
+			)
+		return gen
 
 	def on_Part(self, value):
 		def gen(arg):
