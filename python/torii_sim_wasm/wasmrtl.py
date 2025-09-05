@@ -116,10 +116,15 @@ class _StatementCompiler(StatementVisitor, _Compiler):
 		self.lhs = _LHSValueCompiler(state, emitter, rhs = self.rhs, outputs = outputs)
 
 	def on_statements(self, stmts):
-		raise NotImplementedError # :nocov:
+		for stmt in stmts:
+			self(stmt)
 
 	def on_Assign(self, stmt):
-		raise NotImplementedError # :nocov:
+		gen_rhs_value = self.rhs(stmt.rhs) # check for oversized value before generating mask
+		gen_rhs = f'(i64.and (i64.const {(1 << len(stmt.rhs)) - 1:#x}) {gen_rhs_value})'
+		if stmt.rhs.shape().signed:
+			gen_rhs = f'(call $sign {gen_rhs} (i64.const {-1 << (len(stmt.rhs) - 1):#x}))'
+		return self.lhs(stmt.lhs)(gen_rhs)
 
 	def on_Switch(self, stmt):
 		raise NotImplementedError # :nocov:
