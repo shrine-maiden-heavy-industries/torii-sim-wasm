@@ -29,7 +29,19 @@ class _Compiler:
 
 class _ValueCompiler(ValueVisitor, _Compiler):
 	def on_value(self, value):
-		raise NotImplementedError # :nocov:
+		# Wasm currently only supports 63 bit wide values
+		if len(value) > 63:
+			if value.src_loc:
+				src = '{}:{}'.format(*value.src_loc)
+			else:
+				src = 'unknown location'
+			raise OverflowError(
+				f'Value defined at {src} is {len(value)} bits wide, and wasm backend only supports '
+				'signals that are less than 64 bits wide'
+			)
+
+		val = super().on_value(value)
+		return val
 
 	def on_ClockSignal(self, value):
 		raise NotImplementedError # :nocov:
