@@ -120,7 +120,7 @@ class _RHSValueCompiler(_ValueCompiler):
 		self.inputs = inputs
 
 	def on_Const(self, value):
-		raise NotImplementedError # :nocov:
+		return f'(i64.const {value.value})'
 
 	def on_Signal(self, value):
 		if self.inputs is not None:
@@ -239,7 +239,7 @@ class _LHSValueCompiler(_ValueCompiler):
 		self.outputs = outputs
 
 	def on_Const(self, value):
-		raise NotImplementedError # :nocov:
+		raise TypeError # :nocov:
 
 	def on_Signal(self, value):
 		if self.outputs is not None:
