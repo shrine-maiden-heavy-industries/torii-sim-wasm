@@ -224,7 +224,28 @@ class _RHSValueCompiler(_ValueCompiler):
 		return '(i64.const 0)'
 
 	def on_ArrayProxy(self, value):
-		raise NotImplementedError # :nocov:
+		index_mask = (1 << len(value.index)) - 1
+		gen_index = self.emitter.def_var('rhs_index', f'(i64.and (i64.const {index_mask:#x}) {self(value.index)})')
+		gen_value = self.emitter.def_var('rhs_proxy', '(i64.const 0)')
+		if value.elems:
+			for index, elem in enumerate(value.elems):
+				check = f'(i64.eq (i64.const {index}) (local.get ${gen_index}))'
+				if index == 0:
+					self.emitter.append(f'(if {check} (then')
+				else:
+					self.emitter.append(f'(else (if {check} (then')
+				with self.emitter.indent():
+					self.emitter.append(f'(local.set ${gen_value} {self(elem)})')
+				self.emitter.append(')')
+
+			self.emitter.append('(else')
+			with self.emitter.indent():
+				self.emitter.append(f'(local.set ${gen_value} {self(value.elems[-1])})')
+
+			self.emitter.append('))' + '))' * (len(value.elems) - 1))
+			return f'(local.get ${gen_value})'
+		else:
+			return '(i64.const 0)'
 
 class _LHSValueCompiler(_ValueCompiler):
 	def __init__(self, state, emitter, *, rhs, outputs = None) -> None:
@@ -297,7 +318,26 @@ class _LHSValueCompiler(_ValueCompiler):
 		return gen
 
 	def on_ArrayProxy(self, value):
-		raise NotImplementedError # :nocov:
+		def gen(arg):
+			index_mask = (1 << len(value.index)) - 1
+			gen_index = self.emitter.def_var('index', f'(i64.and {self.rrhs(value.index)} (i64.const {index_mask:#x}))')
+			if value.elems:
+				for index, elem in enumerate(value.elems):
+					check = f'(i64.eq (i64.const {index}) (local.get ${gen_index}))'
+					if index == 0:
+						self.emitter.append(f'(if {check} (then')
+					else:
+						self.emitter.append(f'(else (if {check} (then')
+					with self.emitter.indent():
+						self(elem)(arg)
+					self.emitter.append(')')
+
+				self.emitter.append('(else')
+				with self.emitter.indent():
+					self(value.elems[-1])(arg)
+
+				self.emitter.append('))' + '))' * (len(value.elems) - 1))
+		return gen
 
 class _StatementCompiler(StatementVisitor, _Compiler):
 	def __init__(self, state, emitter, *, inputs = None, outputs = None) -> None:
