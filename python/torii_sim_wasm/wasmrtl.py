@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
+from contextlib  import contextmanager
+
 from torii.hdl.ast   import SignalSet
 from torii.hdl.ir    import Fragment
 from torii.hdl.xfrm  import LHSGroupFilter, StatementVisitor, ValueVisitor
@@ -21,6 +23,56 @@ class WASMRTLProcess(BaseProcess):
 	def reset(self):
 		self.runnable = self.is_comb
 		self.passive  = True
+
+class _WASMEmitter:
+	def __init__(self):
+		self._level = 0
+		self._suffix = 0
+		self._imports = []
+		self._globals = []
+		self._variables = []
+		self._instructions = []
+
+	def append(self, code):
+		self._instructions.append('\t\t' + '\t' * self._level)
+		self._instructions.append(code)
+		self._instructions.append('\n')
+
+	def add_variable(self, name):
+		self._variables.append('\t\t')
+		self._variables.append(f'(local ${name} i64)')
+		self._variables.append('\n')
+
+	def def_var(self, name, code):
+		name = f'{name}_{self._suffix}'
+		self._suffix += 1
+		self.add_variable(name)
+		self.append(f'(local.set ${name} {code})')
+		return name
+
+	@contextmanager
+	def indent(self):
+		self._level += 1
+		yield
+		self._level -= 1
+
+	def flush(self, result: bool = False):
+		module = '(module\n'
+		module += '\t(import "" "gmem" (memory $gmem i64 0 2 shared ))\n'
+		module += '\t(func $slots_set_py (import "" "slots_set_py") (param i64) (param i64))\n'
+		module += ''.join(self._globals)
+		module += '\n'
+		module += ''.join(self._imports)
+		module += '\n'
+		module += '\t(func (export "run") (result i64)\n'
+		module += ''.join(self._variables)
+		module += ''.join(self._instructions)
+		if not result:
+			module += '\t\t(i64.const 0)\n'
+		module += "\n\t)\n)\n"
+
+		self._instructions.clear()
+		return module
 
 class _Compiler:
 	def __init__(self, state, emitter) -> None:
@@ -239,10 +291,11 @@ class WASMFragmentCompiler:
 			domain_stmts = LHSGroupFilter(domain_signals)(fragment.statements)
 			domain_process = WASMRTLProcess(is_comb = domain_name is None)
 
+			emitter = _WASMEmitter()
 			if domain_name is None:
 				inputs = SignalSet()
-				_StatementCompiler(self.state, None, inputs = inputs)(domain_stmts)
+				_StatementCompiler(self.state, emitter, inputs = inputs)(domain_stmts)
 			else:
-				_StatementCompiler(self.state, None)(domain_stmts)
+				_StatementCompiler(self.state, emitter)(domain_stmts)
 
 			processes.add(domain_process)
