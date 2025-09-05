@@ -71,7 +71,13 @@ class _RHSValueCompiler(_ValueCompiler):
 		raise NotImplementedError # :nocov:
 
 	def on_Signal(self, value):
-		raise NotImplementedError # :nocov:
+		if self.inputs is not None:
+			self.inputs.add(value)
+
+		if self.mode == 'curr':
+			return f'(i64.load (i64.const {self.state.get_signal(value) * 16}))'
+		else:
+			return f'(local.get $next_{self.state.get_signal(value)})'
 
 	def on_Operator(self, value):
 		def mask(value):
@@ -171,7 +177,18 @@ class _LHSValueCompiler(_ValueCompiler):
 		raise NotImplementedError # :nocov:
 
 	def on_Signal(self, value):
-		raise NotImplementedError # :nocov:
+		if self.outputs is not None:
+			self.outputs.add(value)
+
+		def gen(arg):
+			value_mask = (1 << len(value)) - 1
+			if value.shape().signed:
+				value_const = f'(i64.const {-1 << (len(value) - 1):#x})'
+				value_sign = f'(call $sign (i64.and (i64.const {value_mask:#x}) {arg}) {value_const})'
+			else: # unsigned
+				value_sign = f'(i64.and (i64.const {value_mask:#x}) {arg})'
+			self.emitter.append(f'(local.set $next_{self.state.get_signal(value)} {value_sign})')
+		return gen
 
 	def on_Operator(self, value):
 		raise NotImplementedError # :nocov:

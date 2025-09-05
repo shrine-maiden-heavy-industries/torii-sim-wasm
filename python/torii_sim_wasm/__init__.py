@@ -163,6 +163,14 @@ class _WASMimulation(BaseSimulation):
 		self.slots    = []
 		self.pending  = set()
 
+	def get_signal(self, signal):
+		try:
+			return self.signals[signal]
+		except KeyError:
+			index = len(self.slots)
+			self.signals[signal] = index
+			return index
+
 class WASMSimEngine(BaseEngine):
 	def __init__(self, fragment: Fragment) -> None:
 		self._state = _WASMimulation()
