@@ -28,7 +28,23 @@ class _Compiler:
 		self.emitter = emitter
 
 class _ValueCompiler(ValueVisitor, _Compiler):
-	...
+	def on_value(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_ClockSignal(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_ResetSignal(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_AnyValue(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_Sample(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_Initial(self, value):
+		raise NotImplementedError # :nocov:
 
 class _RHSValueCompiler(_ValueCompiler):
 	def __init__(self, state, emitter, *, mode, inputs = None) -> None:
@@ -38,6 +54,27 @@ class _RHSValueCompiler(_ValueCompiler):
 		self.mode = mode
 		# If not None, `inputs` gets populated with RHS signals.
 		self.inputs = inputs
+
+	def on_Const(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_Signal(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_Operator(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_Slice(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_Part(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_Cat(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_ArrayProxy(self, value):
+		raise NotImplementedError # :nocov:
 
 class _LHSValueCompiler(_ValueCompiler):
 	def __init__(self, state, emitter, *, rhs, outputs = None) -> None:
@@ -51,11 +88,44 @@ class _LHSValueCompiler(_ValueCompiler):
 		# If not None, `outputs` gets populated with signals on LHS.
 		self.outputs = outputs
 
+	def on_Const(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_Signal(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_Operator(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_Slice(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_Part(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_Cat(self, value):
+		raise NotImplementedError # :nocov:
+
+	def on_ArrayProxy(self, value):
+		raise NotImplementedError # :nocov:
+
 class _StatementCompiler(StatementVisitor, _Compiler):
 	def __init__(self, state, emitter, *, inputs = None, outputs = None) -> None:
 		super().__init__(state, emitter)
 		self.rhs = _RHSValueCompiler(state, emitter, mode = 'curr', inputs = inputs)
 		self.lhs = _LHSValueCompiler(state, emitter, rhs = self.rhs, outputs = outputs)
+
+	def on_statements(self, stmts):
+		raise NotImplementedError # :nocov:
+
+	def on_Assign(self, stmt):
+		raise NotImplementedError # :nocov:
+
+	def on_Switch(self, stmt):
+		raise NotImplementedError # :nocov:
+
+	def on_Property(self, stmt):
+		raise NotImplementedError # :nocov:
 
 class WASMFragmentCompiler:
 	def __init__(self, state) -> None:
