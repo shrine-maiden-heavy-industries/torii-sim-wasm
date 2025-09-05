@@ -240,7 +240,8 @@ class WASMSimEngine(BaseEngine):
 		pass
 
 	def advance(self):
-		return True
+		self._timeline.advance()
+		return any(not process.passive for process in self._processes)
 
 	@property
 	def now(self):

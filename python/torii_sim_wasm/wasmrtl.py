@@ -299,3 +299,5 @@ class WASMFragmentCompiler:
 				_StatementCompiler(self.state, emitter)(domain_stmts)
 
 			processes.add(domain_process)
+
+		return processes
