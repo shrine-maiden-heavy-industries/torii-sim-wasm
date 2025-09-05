@@ -205,7 +205,9 @@ class _RHSValueCompiler(_ValueCompiler):
 		raise NotImplementedError # :nocov:
 
 	def on_Part(self, value):
-		raise NotImplementedError # :nocov:
+		offset_mask = (1 << len(value.offset)) - 1
+		offset = f'(i64.mul (i64.const {value.stride}) (i64.and (i64.const {offset_mask:#x}) {self(value.offset)}))'
+		return f'(i64.and (i64.const {(1 << value.width) - 1}) (i64.shr_u {self(value.value)} {offset}))'
 
 	def on_Cat(self, value):
 		raise NotImplementedError # :nocov:
@@ -249,7 +251,19 @@ class _LHSValueCompiler(_ValueCompiler):
 		raise NotImplementedError # :nocov:
 
 	def on_Part(self, value):
-		raise NotImplementedError # :nocov:
+		def gen(arg):
+			width_mask = (1 << value.width) - 1
+			offset_mask = (1 << len(value.offset)) - 1
+			offset_and = f'(i64.and (i64.const {offset_mask:#x}) {self.rrhs(value.offset)})'
+			offset = f'(i64.mul (i64.const {value.stride}) {offset_and})'
+			self(value.value)(
+				f'(i64.and {self.lrhs(value.value)} '
+				f'(i64.or '
+				f'(i64.xor (i64.shl (i64.const {width_mask:#x}) {offset}) (i64.const 0xffffffffffffffff)) '
+				f'(i64.shl (i64.and (i64.const {width_mask:#x}) {arg}) {offset}))'
+				f')'
+			)
+		return gen
 
 	def on_Cat(self, value):
 		raise NotImplementedError # :nocov:
