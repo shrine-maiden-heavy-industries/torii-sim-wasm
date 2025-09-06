@@ -11,9 +11,9 @@ from vcd.gtkw        import GTKWSave
 from vcd.writer      import Variable
 from torii.hdl.ast   import Signal, SignalDict, Value
 from torii.hdl.ir    import Fragment
-from torii.sim._base import BaseEngine, BaseSimulation
+from torii.sim._base import BaseEngine, BaseSignalState, BaseSimulation
 
-from ._wasm_engine   import __version__
+from ._wasm_engine   import __version__, WASMInstance, WASMValue
 from .wasmrtl        import WASMFragmentCompiler
 
 __all__ = (
@@ -207,18 +207,80 @@ class _Timeline:
 
 		return True
 
+class _WASMGlobal():
+	def __init__(self, memory: WASMInstance, signal, offset, value) -> None:
+		self._memory = memory
+		self._signal = signal
+		self._wasm   = WASMValue(memory, len(self._signal), offset, value)
+		self._value  = value
+		self.set(value)
+
+	def set(self, value):
+		self._value = value & ((1 << len(self._signal)) - 1)
+		self._wasm.set(value)
+
+	def get(self):
+		self._wasm.get()
+
+	def value(self):
+		return self._value
+
+	def update(self, value):
+		self._value = value
+
+	def __eq__(self, other):
+		if isinstance(other, _WASMGlobal):
+			return self.value() == other.value()
+		else:
+			return self.value() == int(other)
+
+class _WASMSignalState(BaseSignalState):
+	__slots__ = ('signal', 'curr', 'next', 'waiters', 'pending')
+
+	def __init__(self, memory: WASMInstance, index, signal, pending) -> None:
+		self.signal = signal
+		self.pending = pending
+		self.waiters = dict()
+		self.curr = _WASMGlobal(memory, signal, index * 2, signal.reset)
+		self.next = _WASMGlobal(memory, signal, index * 2 + 1, signal.reset)
+
+	def set(self, value):
+		self.next.update(value)
+		self.pending.add(self)
+
+	def update(self, value):
+		raw_val = int(value)
+		if self.next.value() == raw_val:
+			return
+
+		self.next.set(raw_val)
+		self.pending.add(self)
+
+	def commit(self):
+		if self.curr == self.next:
+			return False
+		self.curr.set(self.next.value())
+
+		awoken_any = False
+		for process, trigger in self.waiters.items():
+			if trigger is None or trigger == self.curr.value():
+				process.runnable = awoken_any = True
+		return awoken_any
+
 class _WASMimulation(BaseSimulation):
 	def __init__(self) -> None:
 		self.timeline = _Timeline()
 		self.signals  = SignalDict()
 		self.slots    = []
 		self.pending  = set()
+		self.memory = WASMInstance()
 
 	def get_signal(self, signal):
 		try:
 			return self.signals[signal]
 		except KeyError:
 			index = len(self.slots)
+			self.slots.append(_WASMSignalState(self.memory, index, signal, self.pending))
 			self.signals[signal] = index
 			return index
 
