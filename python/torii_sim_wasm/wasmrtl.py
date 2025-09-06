@@ -322,6 +322,15 @@ class _RHSValueCompiler(_ValueCompiler):
 		else:
 			return '(i64.const 0)'
 
+	@classmethod
+	def compile(cls, state, value, *, mode):
+		emitter = _WASMEmitter()
+		compiler = cls(state, emitter, mode = mode)
+		emitter.append(compiler(value))
+
+		output_code = emitter.flush(True)
+		return output_code
+
 class _LHSValueCompiler(_ValueCompiler):
 	def __init__(self, state, emitter, *, rhs, outputs = None) -> None:
 		super().__init__(state, emitter)
@@ -468,6 +477,21 @@ class _StatementCompiler(StatementVisitor, _Compiler):
 
 	def on_Property(self, stmt):
 		raise NotImplementedError # :nocov:
+
+	@classmethod
+	def compile(cls, state, stmt):
+		output_indexes = [state.get_signal(signal) for signal in stmt._lhs_signals()]
+		emitter = _WASMEmitter()
+		for signal_index in output_indexes:
+			emitter.add_variable(f'next_{signal_index}')
+			emitter.append(f'(local.set $next_{signal_index} (i64.load (i64.const {(signal_index * 2 + 1) * 8})))')
+		compiler = cls(state, emitter)
+		compiler(stmt)
+		for signal_index in output_indexes:
+			emitter.append(f'(call $slots_set (i64.const {signal_index}) (local.get $next_{signal_index}))')
+
+		output_code = emitter.flush()
+		return output_code
 
 class WASMFragmentCompiler:
 	def __init__(self, state) -> None:
