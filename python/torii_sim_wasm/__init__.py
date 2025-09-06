@@ -15,6 +15,7 @@ from torii.sim._base import BaseEngine, BaseSignalState, BaseSimulation
 
 from ._wasm_engine   import __version__, WASMInstance, WASMValue
 from .wasmrtl        import WASMFragmentCompiler
+from .wasmclock     import WASMClockProcess
 
 __all__ = (
 	'WASMSimEngine',
@@ -321,7 +322,9 @@ class WASMSimEngine(BaseEngine):
 		pass
 
 	def add_clock_process(self, clock, *, phase, period):
-		pass
+		self._processes.add(
+			WASMClockProcess(self._state, clock, phase = phase, period = period)
+		)
 
 	def reset(self):
 		pass
