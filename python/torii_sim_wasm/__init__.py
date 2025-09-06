@@ -299,6 +299,9 @@ class _WASMimulation(BaseSimulation):
 		self.pending.clear()
 		return converged
 
+	def wait_interval(self, process, interval):
+		self.timeline.delay(interval, process)
+
 	def add_trigger(self, process, signal, *, trigger = None):
 		index = self.get_signal(signal)
 		if process in self.slots[index].waiters and self.slots[index].waiters[process] != trigger:
