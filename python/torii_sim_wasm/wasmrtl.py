@@ -277,7 +277,9 @@ class _LHSValueCompiler(_ValueCompiler):
 		return gen
 
 	def on_Operator(self, value):
-		raise NotImplementedError # :nocov:
+		if value.operator in ('u', 's'):
+			return self(value.operands[0])
+		raise TypeError # :nocov:
 
 	def on_Slice(self, value):
 		def gen(arg):
