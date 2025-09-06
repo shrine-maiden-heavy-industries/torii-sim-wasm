@@ -407,10 +407,35 @@ class WASMFragmentCompiler:
 
 			emitter = _WASMEmitter()
 			if domain_name is None:
+				for signal in domain_signals:
+					signal_index = self.state.get_signal(signal)
+					emitter.add_variable(f'next_{signal_index}')
+					emitter.append(f'(local.set $next_{signal_index} (i64.const {signal.reset}))')
+
 				inputs = SignalSet()
 				_StatementCompiler(self.state, emitter, inputs = inputs)(domain_stmts)
+
+				for input in inputs:
+					self.state.add_trigger(domain_process, input)
 			else:
+				domain = fragment.domains[domain_name]
+				clk_trigger = 1 if domain.clk_edge == 'pos' else 0
+				self.state.add_trigger(domain_process, domain.clk, trigger = clk_trigger)
+				if domain.rst is not None and domain.async_reset:
+					rst_trigger = 1
+					self.state.add_trigger(domain_process, domain.rst, trigger = rst_trigger)
+
+				for signal in domain_signals:
+					signal_index = self.state.get_signal(signal)
+					emitter.add_variable(f'next_{signal_index}')
+					index_const = f'(i64.const {(signal_index * 2 + 1) * 8})'
+					emitter.append(f'(local.set $next_{signal_index} (i64.load {index_const}))')
+
 				_StatementCompiler(self.state, emitter)(domain_stmts)
+
+			for signal in domain_signals:
+				signal_index = self.state.get_signal(signal)
+				emitter.append(f'(call $slots_set (i64.const {signal_index}) (local.get $next_{signal_index}))')
 
 			processes.add(domain_process)
 

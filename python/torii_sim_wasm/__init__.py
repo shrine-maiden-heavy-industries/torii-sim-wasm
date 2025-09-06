@@ -284,6 +284,18 @@ class _WASMimulation(BaseSimulation):
 			self.signals[signal] = index
 			return index
 
+	def add_trigger(self, process, signal, *, trigger = None):
+		index = self.get_signal(signal)
+		if process in self.slots[index].waiters and self.slots[index].waiters[process] != trigger:
+			raise ValueError('Unable to add trigger for process!')
+		self.slots[index].waiters[process] = trigger
+
+	def remove_trigger(self, process, signal):
+		index = self.get_signal(signal)
+		if process not in self.slots[index].waiters:
+			raise ValueError(f'Unable to remove trigger for process {process!r}, not in the slot list')
+		del self.slots[index].waiters[process]
+
 class WASMSimEngine(BaseEngine):
 	def __init__(self, fragment: Fragment) -> None:
 		self._state = _WASMimulation()
