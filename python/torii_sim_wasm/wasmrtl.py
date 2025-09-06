@@ -359,7 +359,37 @@ class _StatementCompiler(StatementVisitor, _Compiler):
 		return self.lhs(stmt.lhs)(gen_rhs)
 
 	def on_Switch(self, stmt):
-		raise NotImplementedError # :nocov:
+		test_value = self.rhs(stmt.test) # check for oversized value before generating mask
+		gen_test = self.emitter.def_var('test', f'(i64.and (i64.const {(1 << len(stmt.test)) - 1:#x}) {test_value})')
+
+		for index, (patterns, stmts) in enumerate(stmt.cases.items()):
+			gen_checks = []
+			if not patterns:
+				gen_checks.append('(i32.eq (i32.const 1) (i32.const 1))')
+			else:
+				for pattern in patterns:
+					if "-" in pattern:
+						mask  = int(''.join('0' if b == '-' else '1' for b in pattern), 2)
+						value = int(''.join('0' if b == '-' else b for b in pattern), 2)
+						value_and = f'(i64.and (i64.const {mask}) (local.get ${gen_test}))'
+						gen_checks.append(f'(i64.eq (i64.const {value}) {value_and})')
+					else:
+						value = int(pattern or '0', 2)
+						gen_checks.append(f'(i64.eq (i64.const {value}) (local.get ${gen_test}))')
+
+			if index == 0:
+				self.emitter.append(f'(if {"".join(gen_checks)} (then')
+			else:
+				self.emitter.append(f'(else (if {"".join(gen_checks)} (then')
+
+			with self.emitter.indent():
+				self(stmts)
+
+			self.emitter.append(')')
+
+		# Close down all the nested if-elses
+		if len(stmt.cases.items()) > 0:
+			self.emitter.append(')' + '))' * (len(stmt.cases.items()) - 1))
 
 	def on_Property(self, stmt):
 		raise NotImplementedError # :nocov:
