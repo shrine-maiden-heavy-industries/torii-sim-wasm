@@ -287,6 +287,16 @@ class _WASMimulation(BaseSimulation):
 			self.signals[signal] = index
 			return index
 
+	def commit(self, changed = None):
+		converged = True
+		for signal_state in self.pending:
+			if signal_state.commit():
+				converged = False
+		if changed is not None:
+			changed.update(self.pending)
+		self.pending.clear()
+		return converged
+
 	def add_trigger(self, process, signal, *, trigger = None):
 		index = self.get_signal(signal)
 		if process in self.slots[index].waiters and self.slots[index].waiters[process] != trigger:
@@ -316,7 +326,26 @@ class WASMSimEngine(BaseEngine):
 	def reset(self):
 		pass
 
+	def _step(self):
+		changed = set() if self._vcd_writers else None
+		# Performs the two phases of a delta cycle in a loop:
+		converged = False
+		while not converged:
+			# 1. eval: run and suspend every non-waiting process once, queueing signal changes
+			for process in self._processes:
+				if process.runnable:
+					process.runnable = False
+					process.run()
+
+			# 2. commit: apply every queued signal change, waking up any waiting processes
+			converged = self._state.commit(changed)
+
+		for vcd_writer in self._vcd_writers:
+			for signal_state in changed:
+				vcd_writer.update(self._timeline.now, signal_state.signal, signal_state.curr.value())
+
 	def advance(self):
+		self._step()
 		self._timeline.advance()
 		return any(not process.passive for process in self._processes)
 
