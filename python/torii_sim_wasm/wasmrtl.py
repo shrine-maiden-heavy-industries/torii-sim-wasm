@@ -14,6 +14,71 @@ __all__ = (
 	'WASMRTLProcess',
 )
 
+WASM_SET_SLOT = '''
+	(func $slots_set (param $index i64) (param $value i64)
+		(local $curr i64)
+		(local $next i64)
+		(local $next_off i64)
+		(local.set $curr (i64.load (i64.mul (local.get $index) (i64.const 16))))
+		(local.set $next_off (i64.mul (i64.add (i64.mul (local.get $index) (i64.const 2)) (i64.const 1)) (i64.const 8)))
+		(local.set $next (i64.load (local.get $next_off)))
+		(if (i64.ne (local.get $next) (local.get $value))
+			(then
+				(i64.store (local.get $next_off) (local.get $value))
+				(call $slots_set_py (local.get $index) (local.get $value))
+			)
+		)
+	)
+'''
+
+WASM_SIGN = '''
+	(func $sign (param $value i64) (param $sign i64) (result i64)
+		(if (result i64) (i64.ne (i64.and (local.get $value) (local.get $sign)) (i64.const 0))
+			(then (return (i64.or (local.get $value) (local.get $sign))))
+			(else (return (local.get $value)))
+		)
+	)
+'''
+
+# Signed floor div for integers
+WASM_ZDIV = '''
+	(func $zdiv (param $lhs i64) (param $rhs i64) (result i64)
+		(local $res i64)
+		(if (result i64) (i64.eq (local.get $rhs) (i64.const 0))
+			(then (return (i64.const 0)))
+			(else
+				(local.set $res (i64.div_s (local.get $lhs) (local.get $rhs)))
+				(if (i32.gt_u (i32.and
+							(i64.lt_s (i64.xor (local.get $lhs) (local.get $rhs)) (i64.const 0))
+							(i64.ne (i64.rem_s (local.get $lhs) (local.get $rhs)) (i64.const 0))
+						)
+						(i32.const 0)
+					)
+					(then (local.set $res (i64.sub (local.get $res) (i64.const 1))))
+				)
+				(return (local.get $res))
+			)
+		)
+	)
+'''
+
+WASM_ZMOD = '''
+	(func $zmod (param $lhs i64) (param $rhs i64) (result i64)
+		(if (result i64) (i64.eq (local.get $rhs) (i64.const 0))
+			(then (return (i64.const 0)))
+			(else (return
+				(i64.rem_s
+					(i64.add
+						(i64.rem_s (local.get $lhs) (local.get $rhs))
+						(local.get $rhs)
+					)
+					(local.get $rhs)
+				)
+			))
+		)
+	)
+'''
+
 class WASMRTLProcess(BaseProcess):
 	__slots__ = ('is_comb', 'runnable', 'passive', 'run')
 
@@ -65,6 +130,14 @@ class _WASMEmitter:
 		module += ''.join(self._globals)
 		module += '\n'
 		module += ''.join(self._imports)
+		module += '\n'
+		module += WASM_SET_SLOT
+		module += '\n'
+		module += WASM_SIGN
+		module += '\n'
+		module += WASM_ZDIV
+		module += '\n'
+		module += WASM_ZMOD
 		module += '\n'
 		module += '\t(func (export "run") (result i64)\n'
 		module += ''.join(self._variables)
