@@ -7,6 +7,8 @@ from torii.hdl.ir    import Fragment
 from torii.hdl.xfrm  import LHSGroupFilter, StatementVisitor, ValueVisitor
 from torii.sim._base import BaseProcess
 
+from ._wasm_engine   import WASMRunner
+
 __all__ = (
 	'WASMFragmentCompiler',
 	'WASMRTLProcess',
@@ -437,6 +439,8 @@ class WASMFragmentCompiler:
 				signal_index = self.state.get_signal(signal)
 				emitter.append(f'(call $slots_set (i64.const {signal_index}) (local.get $next_{signal_index}))')
 
+			module_code = emitter.flush()
+			domain_process.run = WASMRunner(module_code, self.state.memory, self.state.set_slot)
 			processes.add(domain_process)
 
 		for subfragment_index, (subfragment, subfragment_name) in enumerate(fragment.subfragments):

@@ -275,6 +275,9 @@ class _WASMimulation(BaseSimulation):
 		self.pending  = set()
 		self.memory = WASMInstance()
 
+	def set_slot(self, index, value):
+		self.slots[index].set(value)
+
 	def get_signal(self, signal):
 		try:
 			return self.signals[signal]
