@@ -439,4 +439,9 @@ class WASMFragmentCompiler:
 
 			processes.add(domain_process)
 
+		for subfragment_index, (subfragment, subfragment_name) in enumerate(fragment.subfragments):
+			if subfragment_name is None:
+				subfragment_name = f'U${subfragment_index}'
+			processes.update(self(subfragment))
+
 		return processes
