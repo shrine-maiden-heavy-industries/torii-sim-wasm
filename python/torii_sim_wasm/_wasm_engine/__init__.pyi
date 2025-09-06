@@ -15,3 +15,10 @@ class WASMValue():
 
 	def get(self) -> int:
 		...
+
+class WASMRunner():
+	def __init__(self, src: str, instance: WASMInstance, callback) -> None:
+		...
+
+	def __call__(self) -> int:
+		...
