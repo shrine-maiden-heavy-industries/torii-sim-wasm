@@ -5,14 +5,14 @@ use wasmtime::{Config, Engine, Memory, MemoryTypeBuilder, Store};
 
 #[pyclass]
 pub struct WASMInstance {
-    memory: Memory,
-    store: Store<()>,
+    pub memory: Memory,
+    pub store: Store<()>,
 }
 
 #[pymethods]
 impl WASMInstance {
     #[new]
-    pub fn new() -> Self {
+    fn new() -> Self {
         let mut config = Config::new();
         config.strategy(wasmtime::Strategy::Winch);
         let engine = Engine::new(&config).unwrap();
