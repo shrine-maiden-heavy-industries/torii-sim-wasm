@@ -15,7 +15,8 @@ from torii.sim._base import BaseEngine, BaseSignalState, BaseSimulation
 
 from ._wasm_engine   import __version__, WASMInstance, WASMValue
 from .wasmrtl        import WASMFragmentCompiler
-from .wasmclock     import WASMClockProcess
+from .wasmclock      import WASMClockProcess
+from .wasmcoro       import WASMCoroProcess
 
 __all__ = (
 	'WASMSimEngine',
@@ -319,7 +320,9 @@ class WASMSimEngine(BaseEngine):
 		self._vcd_writers = []
 
 	def add_coroutine_process(self, process, *, default_cmd):
-		pass
+		self._processes.add(
+			WASMCoroProcess(self._state, self._frag.domains, process, default_cmd = default_cmd)
+		)
 
 	def add_clock_process(self, clock, *, phase, period):
 		self._processes.add(
