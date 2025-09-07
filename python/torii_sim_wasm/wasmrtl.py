@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from contextlib  import contextmanager
+from os          import getenv
+from tempfile    import NamedTemporaryFile
 
 from torii.hdl.ast   import SignalSet
 from torii.hdl.ir    import Fragment
@@ -537,6 +539,10 @@ class WASMFragmentCompiler:
 				emitter.append(f'(call $slots_set (i64.const {signal_index}) (local.get $next_{signal_index}))')
 
 			module_code = emitter.flush()
+			if getenv('TORII_WASMSIM_DUMP'):
+				file = NamedTemporaryFile('w', prefix = 'torii_wasmsim_', delete = False)
+				file.write(module_code)
+
 			domain_process.run = WASMRunner(module_code, self.state.memory, self.state.set_slot)
 			processes.add(domain_process)
 
