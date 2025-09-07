@@ -102,6 +102,10 @@ class _WASMEmitter:
 		self._variables = []
 		self._instructions = []
 
+	def add_src(self, src_loc):
+		if src_loc:
+			self.append(';; {}:{}'.format(*src_loc))
+
 	def append(self, code):
 		self._instructions.append('\t\t' + '\t' * self._level)
 		self._instructions.append(code)
@@ -302,10 +306,12 @@ class _RHSValueCompiler(_ValueCompiler):
 
 	def on_ArrayProxy(self, value):
 		index_mask = (1 << len(value.index)) - 1
+		self.emitter.add_src(value.src_loc)
 		gen_index = self.emitter.def_var('rhs_index', f'(i64.and (i64.const {index_mask:#x}) {self(value.index)})')
 		gen_value = self.emitter.def_var('rhs_proxy', '(i64.const 0)')
 		if value.elems:
 			for index, elem in enumerate(value.elems):
+				self.emitter.add_src(value.src_loc)
 				check = f'(i64.eq (i64.const {index}) (local.get ${gen_index}))'
 				if index == 0:
 					self.emitter.append(f'(if {check} (then')
@@ -359,6 +365,7 @@ class _LHSValueCompiler(_ValueCompiler):
 				value_sign = f'(call $sign (i64.and (i64.const {value_mask:#x}) {arg}) {value_const})'
 			else: # unsigned
 				value_sign = f'(i64.and (i64.const {value_mask:#x}) {arg})'
+			self.emitter.add_src(value.src_loc)
 			self.emitter.append(f'(local.set $next_{self.state.get_signal(value)} {value_sign})')
 		return gen
 
@@ -396,6 +403,7 @@ class _LHSValueCompiler(_ValueCompiler):
 
 	def on_Cat(self, value):
 		def gen(arg):
+			self.emitter.add_src(value.src_loc)
 			gen_arg = self.emitter.def_var('cat', arg)
 			offset = 0
 			for part in value.parts:
@@ -407,10 +415,12 @@ class _LHSValueCompiler(_ValueCompiler):
 
 	def on_ArrayProxy(self, value):
 		def gen(arg):
+			self.emitter.add_src(value.src_loc)
 			index_mask = (1 << len(value.index)) - 1
 			gen_index = self.emitter.def_var('index', f'(i64.and {self.rrhs(value.index)} (i64.const {index_mask:#x}))')
 			if value.elems:
 				for index, elem in enumerate(value.elems):
+					self.emitter.add_src(value.src_loc)
 					check = f'(i64.eq (i64.const {index}) (local.get ${gen_index}))'
 					if index == 0:
 						self.emitter.append(f'(if {check} (then')
@@ -420,6 +430,7 @@ class _LHSValueCompiler(_ValueCompiler):
 						self(elem)(arg)
 					self.emitter.append(')')
 
+				self.emitter.add_src(value.src_loc)
 				self.emitter.append('(else')
 				with self.emitter.indent():
 					self(value.elems[-1])(arg)
@@ -449,6 +460,7 @@ class _StatementCompiler(StatementVisitor, _Compiler):
 		gen_test = self.emitter.def_var('test', f'(i64.and (i64.const {(1 << len(stmt.test)) - 1:#x}) {test_value})')
 
 		for index, (patterns, stmts) in enumerate(stmt.cases.items()):
+			self.emitter.add_src(stmt.src_loc)
 			gen_checks = []
 			if not patterns:
 				gen_checks.append('(i32.eq (i32.const 1) (i32.const 1))')
