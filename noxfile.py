@@ -31,7 +31,7 @@ def test(session: Session) -> None:
 	OUTPUT_DIR = BUILD_DIR / 'tests'
 	OUTPUT_DIR.mkdir(parents = True, exist_ok = True)
 
-	unittest_args = ('-m', 'unittest', 'discover', '-s', str(ROOT_DIR / 'python' / 'tests'))
+	unittest_args = ('-m', 'unittest', 'discover', '-s', str(ROOT_DIR / 'python'))
 
 	session.install('-e', '.')
 
