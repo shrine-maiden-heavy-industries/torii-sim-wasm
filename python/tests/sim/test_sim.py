@@ -3,11 +3,13 @@
 
 from contextlib           import contextmanager
 
-from torii.hdl.ast        import Signal, Value
-from torii.hdl.dsl        import Module, Statement
+from torii.hdl.ast        import Signal, Value, Statement
+from torii.hdl.dsl        import Module
 from torii.hdl.ir         import Fragment
 from torii.sim            import Settle, Simulator
 from torii.util           import flatten
+
+from torii_sim_wasm       import WASMSimEngine
 
 from ..utils              import ToriiTestSuiteCase
 from .integration_harness import SimulatorIntegrationTestsMixin
@@ -54,7 +56,7 @@ class WASMSimulatorUnitTestCase(ToriiTestSuiteCase, SimulatorUnitTestsMixin):
 		for signal in flatten(s._lhs_signals() for s in Statement.cast(stmt)):
 			frag.add_driver(signal)
 
-		sim = Simulator(frag, engine = 'wasm')
+		sim = Simulator(frag, engine = WASMSimEngine)
 
 		def process():
 			for isig, input in zip(isigs, inputs):
@@ -69,7 +71,7 @@ class WASMSimulatorUnitTestCase(ToriiTestSuiteCase, SimulatorUnitTestsMixin):
 class WASMSimulatorIntegrationTestCase(ToriiTestSuiteCase, SimulatorIntegrationTestsMixin):
 	@contextmanager
 	def assertSimulation(self, module, deadline = None):
-		sim = Simulator(module, engine = 'wasm')
+		sim = Simulator(module, engine = WASMSimEngine)
 		yield sim
 		with sim.write_vcd('test.vcd', 'test.gtkw'):
 			if deadline is None:
@@ -79,4 +81,4 @@ class WASMSimulatorIntegrationTestCase(ToriiTestSuiteCase, SimulatorIntegrationT
 
 class WASMRegressionTestCase(ToriiTestSuiteCase, SimulatorRegressionTestMixin):
 	def get_simulator(self, dut) -> Simulator:
-		return Simulator(dut, engine = 'wasm')
+		return Simulator(dut, engine = WASMSimEngine)
