@@ -22,6 +22,19 @@ Unreleased template stuff
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+## [0.1.0] - 2025-09-13
+
+### Added
+
 - Initial implementation of the WASM Simulation runtime
 
-[unreleased]: https://github.com/shrine-maiden-heavy-industries/torii-sim-wasm/compare/b00448e...main
+[unreleased]: https://github.com/shrine-maiden-heavy-industries/torii-sim-wasm/compare/v.0.1...main
+[0.1.0]: https://github.com/shrine-maiden-heavy-industries/torii-sim-wasm/compare/b00448e...v0.1.0
