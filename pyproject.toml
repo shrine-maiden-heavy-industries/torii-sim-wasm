@@ -3,6 +3,8 @@
 name = 'torii-sim-wasm'
 description = 'A WASM based simulation backend for Torii'
 authors = [
+	{ name = 'Aki Van Ness', email = 'aki@lethalbit.net' },
+	{ name = 'Miika Alikirri', email = 'duck@duckie.fi' },
     { name = 'Torii Contributors' },
 ]
 dynamic = ['version']
