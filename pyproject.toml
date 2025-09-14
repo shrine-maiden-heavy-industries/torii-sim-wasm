@@ -23,7 +23,7 @@ keywords = [
     'WASM',
 ]
 classifiers = [
-	'Development Status :: 4 - Beta',
+	'Development Status :: 3 - Alpha',
 
 	'Intended Audience :: Developers',
 	'Intended Audience :: Education',
