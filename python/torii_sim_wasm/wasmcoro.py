@@ -81,15 +81,18 @@ class WASMCoroProcess(BaseProcess):
 				if isinstance(command, ValueCastable):
 					command = Value.cast(command)
 				if isinstance(command, Value):
-					module_code = _RHSValueCompiler.compile(self.state, command, mode = 'curr')
-					run = WASMRunner(module_code, self.state.memory, self.state.set_slot)
-					result = run()
+					if not hasattr(command, 'runner'):
+						module_code = _RHSValueCompiler.compile(self.state, command, mode = 'curr')
+						command.runner = WASMRunner(module_code, self.state.memory, self.state.set_slot)
+
+					result = command.runner()
 					response = Const.normalize(result, command.shape())
 
 				elif isinstance(command, Statement):
-					module_code = _StatementCompiler.compile(self.state, command)
-					run = WASMRunner(module_code, self.state.memory, self.state.set_slot)
-					run()
+					if not hasattr(command, 'runner'):
+						module_code = _StatementCompiler.compile(self.state, command)
+						command.runner = WASMRunner(module_code, self.state.memory, self.state.set_slot)
+					command.runner()
 
 				elif type(command) is Tick:
 					domain = command.domain
