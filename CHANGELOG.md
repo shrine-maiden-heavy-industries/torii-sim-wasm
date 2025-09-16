@@ -30,11 +30,18 @@ Unreleased template stuff
 
 ### Fixed
 
+## [0.2.0] - 2025-09-15
+
+### Fixed
+
+- Fixed an issue where multiple WASM modules were being generated unnecessarily causing wasmtime to die once the instance limit was reached.
+
 ## [0.1.0] - 2025-09-13
 
 ### Added
 
 - Initial implementation of the WASM Simulation runtime
 
-[unreleased]: https://github.com/shrine-maiden-heavy-industries/torii-sim-wasm/compare/v.0.1...main
+[unreleased]: https://github.com/shrine-maiden-heavy-industries/torii-sim-wasm/compare/v.2.0...main
+[0.2.0]: https://github.com/shrine-maiden-heavy-industries/torii-sim-wasm/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/shrine-maiden-heavy-industries/torii-sim-wasm/compare/b00448e...v0.1.0
