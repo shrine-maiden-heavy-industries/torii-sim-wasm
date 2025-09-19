@@ -4,6 +4,7 @@ use crate::memory::WASMInstance;
 
 #[pyclass]
 pub struct WASMSimulation {
+    #[pyo3(get)]
     pub timeline: Py<PyAny>,
     pub signals: Py<PyDict>,
     pub memory: WASMInstance,
