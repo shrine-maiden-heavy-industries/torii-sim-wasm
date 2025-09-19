@@ -6,18 +6,34 @@ use crate::memory::WASMInstance;
 pub struct WASMSimulation {
     #[pyo3(get)]
     pub timeline: Py<PyAny>,
-    pub signals: Py<PyDict>,
+    pub signals: Py<PyAny>,
     pub memory: WASMInstance,
 }
 
 #[pymethods]
 impl WASMSimulation {
     #[new]
-    fn new(timeline: Py<PyAny>) -> Self {
-        Python::attach(|py| Self {
+    fn new(timeline: Py<PyAny>, signals: Py<PyAny>) -> Self {
+        Self {
             timeline,
-            signals: PyDict::new(py).into(),
+            signals,
             memory: WASMInstance::new(),
+        }
+    }
+
+    fn get_signal(&mut self, signal: Py<PyAny>) -> PyResult<usize> {
+        Python::attach(|py| {
+            let index = self.signals.bind(py).get_item(signal.clone_ref(py));
+            if let Ok(index) = index {
+                index.extract()
+            } else {
+                // assuming the error is always keyerror
+                let index = self.signals.bind(py).len()?;
+                self.signals
+                    .bind(py)
+                    .set_item(signal.clone_ref(py), index)?;
+                Ok(index)
+            }
         })
     }
 }
