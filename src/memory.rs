@@ -12,7 +12,7 @@ pub struct WASMInstance {
 #[pymethods]
 impl WASMInstance {
     #[new]
-    fn new() -> Self {
+    pub fn new() -> Self {
         let mut config = Config::new();
         config.strategy(wasmtime::Strategy::Winch);
         let engine = Engine::new(&config).unwrap();
