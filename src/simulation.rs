@@ -36,4 +36,21 @@ impl WASMSimulation {
             }
         })
     }
+
+    #[pyo3(signature = (_changed = None))]
+    fn commit(&mut self, _changed: Option<Py<PyAny>>) -> PyResult<()> {
+        Ok(())
+    }
+
+    fn wait_interval(&mut self, _process: Py<PyAny>, _signal: Py<PyAny>) -> PyResult<()> {
+        Ok(())
+    }
+
+    fn add_trigger(&mut self, _process: Py<PyAny>, _signal: Py<PyAny>) -> PyResult<()> {
+        Ok(())
+    }
+
+    fn set_slot(&mut self) -> PyResult<()> {
+        Ok(())
+    }
 }
