@@ -1,9 +1,34 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
+from enum import Enum
+from pathlib import Path
+
 __version__: str
 
+class Backend(Enum):
+	WINCH = ...
+	CRANELIFT = ...
+
+class OptLevel(Enum):
+	NONE = ...
+	SPEED = ...
+	SPEED_AND_SIZE = ...
+
+class Profiler(Enum):
+	NONE = ...
+	JITDUMP = ...
+	PERFMAP = ...
+
+class WASMConfig:
+	def __init__(
+		self, backend: Backend = Backend.WINCH, opt_level: OptLevel = OptLevel.SPEED,
+		profiler: Profiler = Profiler.NONE, max_stack: int = 524288, coredump_on_trap: bool = False,
+		inlining: bool = False, cache_path: Path | None = None
+	) -> None:
+		...
+
 class WASMInstance():
-	def __init__(self) -> None:
+	def __init__(self, config: WASMConfig | None = None) -> None:
 		...
 
 class WASMValue():

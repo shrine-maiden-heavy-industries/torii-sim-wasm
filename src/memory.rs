@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 use pyo3::prelude::*;
-use wasmtime::{Config, Engine, Memory, MemoryTypeBuilder, Store};
+use wasmtime::{Engine, Memory, MemoryTypeBuilder, Store};
+
+use crate::config::WASMConfig;
 
 #[pyclass]
 pub struct WASMInstance {
@@ -12,10 +14,11 @@ pub struct WASMInstance {
 #[pymethods]
 impl WASMInstance {
     #[new]
-    fn new() -> Self {
-        let mut config = Config::new();
-        config.strategy(wasmtime::Strategy::Winch);
-        let engine = Engine::new(&config).unwrap();
+    #[pyo3(signature = (config = None))]
+    fn new(config: Option<WASMConfig>) -> Self {
+        let runtime_config = config.unwrap_or_default();
+
+        let engine = Engine::new(&runtime_config.into()).unwrap();
         let mut store = Store::new(&engine, ());
 
         let mem_type = MemoryTypeBuilder::new()

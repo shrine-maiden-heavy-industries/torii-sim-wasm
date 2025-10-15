@@ -13,7 +13,7 @@ from torii.hdl.ast   import Signal, SignalDict, Value
 from torii.hdl.ir    import Fragment
 from torii.sim._base import BaseEngine, BaseSignalState, BaseSimulation
 
-from ._wasm_engine   import __version__, WASMInstance, WASMValue
+from ._wasm_engine   import WASMConfig, WASMInstance, WASMValue, __version__
 from .wasmrtl        import WASMFragmentCompiler
 from .wasmclock      import WASMClockProcess
 from .wasmcoro       import WASMCoroProcess
@@ -270,12 +270,13 @@ class _WASMSignalState(BaseSignalState):
 		return awoken_any
 
 class _WASMimulation(BaseSimulation):
-	def __init__(self) -> None:
+	def __init__(self, config: WASMConfig | None = None) -> None:
 		self.timeline = _Timeline()
 		self.signals  = SignalDict()
 		self.slots    = []
 		self.pending  = set()
-		self.memory = WASMInstance()
+		self.config = WASMConfig() if config is None else config
+		self.memory = WASMInstance(config = self.config)
 
 	def set_slot(self, index, value):
 		self.slots[index].set(value)
@@ -316,7 +317,8 @@ class _WASMimulation(BaseSimulation):
 
 class WASMSimEngine(BaseEngine):
 	def __init__(self, fragment: Fragment) -> None:
-		self._state = _WASMimulation()
+		self._config = WASMConfig()
+		self._state = _WASMimulation(config = self._config)
 		self._timeline = self._state.timeline
 		self._frag = fragment
 		self._processes = WASMFragmentCompiler(self._state)(self._frag)
