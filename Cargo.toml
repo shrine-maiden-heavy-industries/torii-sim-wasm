@@ -8,5 +8,5 @@ name = "torii_sim_wasm"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.26.0", features = ["extension-module"] }
-wasmtime = { version = "37.0.1", features = [ "runtime", "winch", "cranelift", "cache", "wat", "parallel-compilation", "async", "profiling", "all-arch", "pooling-allocator", "demangle", "coredump", "addr2line", "debug-builtins", "component-model", "gc", "threads", "wmemcheck", "incremental-cache", "trace-log", "gc-drc", "gc-null", "stack-switching"] }
+pyo3 = { version = "~0.27.0", features = ["extension-module"] }
+wasmtime = { version = "~38", features = [ "runtime", "winch", "cranelift", "cache", "wat", "parallel-compilation", "async", "profiling", "all-arch", "pooling-allocator", "demangle", "coredump", "addr2line", "debug-builtins", "component-model", "gc", "threads", "wmemcheck", "incremental-cache", "trace-log", "gc-drc", "gc-null", "stack-switching"] }
