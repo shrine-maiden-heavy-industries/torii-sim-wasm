@@ -22,3 +22,7 @@ class WASMRunner():
 
 	def __call__(self) -> int:
 		...
+
+class WASMSimulation():
+	def __init__(self, timeline) -> None:
+		...

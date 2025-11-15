@@ -555,7 +555,7 @@ class WASMFragmentCompiler:
 				file = NamedTemporaryFile('w', prefix = 'torii_wasmsim_', delete = False)
 				file.write(module_code)
 
-			domain_process.run = WASMRunner(module_code, self.state.memory, self.state.set_slot)
+			domain_process.run = WASMRunner(module_code, self.state, self.state.set_slot)
 			processes.add(domain_process)
 
 		for subfragment_index, (subfragment, subfragment_name) in enumerate(fragment.subfragments):

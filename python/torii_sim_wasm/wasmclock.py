@@ -32,6 +32,6 @@ class WASMClockProcess(BaseProcess):
 			self.state.wait_interval(self, self.phase)
 
 		else:
-			clk_state = self.state.slots[self.slot]
-			clk_state.update(not clk_state.curr.value())
+			clk_state = self.state.get_slot(self.slot)
+			clk_state.update(not clk_state.curr.get())
 			self.state.wait_interval(self, self.period // 2)
