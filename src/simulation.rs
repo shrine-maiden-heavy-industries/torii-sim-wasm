@@ -1,7 +1,7 @@
 use pyo3::{
     exceptions::PyValueError,
     prelude::*,
-    types::{PyDict, PyNone},
+    types::{PyDict, PyNone, PySet},
 };
 
 use crate::memory::{WASMInstance, WASMValue};
@@ -13,14 +13,21 @@ pub struct WASMSignalState {
     pub curr: WASMValue,
     pub next: WASMValue,
     pub waiters: Py<PyDict>,
-    // TODO: pending
+    pub pending: Py<PySet>,
 }
 
 #[pymethods]
 impl WASMSignalState {
     #[new]
-    fn new(instance: &WASMInstance, index: usize, signal_size: u64, value: u64) -> Self {
+    fn new(
+        instance: &WASMInstance,
+        index: usize,
+        signal_size: u64,
+        value: u64,
+        pending: Py<PySet>,
+    ) -> Self {
         Python::attach(|py| Self {
+            pending,
             signal_size,
             waiters: PyDict::new(py).into(),
             curr: WASMValue::new(instance, signal_size, index * 2, value),
@@ -33,6 +40,7 @@ impl WASMSignalState {
 pub struct WASMSimulation {
     #[pyo3(get)]
     pub timeline: Py<PyAny>,
+    pub pending: Py<PySet>,
     pub signals: Py<PyAny>,
     pub slots: Vec<WASMSignalState>,
     pub memory: WASMInstance,
@@ -42,12 +50,14 @@ pub struct WASMSimulation {
 impl WASMSimulation {
     #[new]
     fn new(timeline: Py<PyAny>, signals: Py<PyAny>) -> Self {
-        Self {
+        Python::attach(|py| Self {
             timeline,
             signals,
             slots: Vec::new(),
+            // TODO: return error instead of unwrap
+            pending: PySet::empty(py).unwrap().into(),
             memory: WASMInstance::new(),
-        }
+        })
     }
 
     fn get_signal(&mut self, signal: Py<PyAny>) -> PyResult<usize> {
@@ -63,6 +73,7 @@ impl WASMSimulation {
                     index,
                     signal.bind(py).len()? as u64,
                     signal.bind(py).getattr("reset")?.extract::<u64>()?,
+                    self.pending.clone_ref(py),
                 ));
                 self.signals
                     .bind(py)
@@ -72,9 +83,27 @@ impl WASMSimulation {
         })
     }
 
-    #[pyo3(signature = (_changed = None))]
-    fn commit(&mut self, _changed: Option<Py<PyAny>>) -> PyResult<()> {
-        Ok(())
+    #[pyo3(signature = (changed = None))]
+    fn commit(&mut self, changed: Option<Py<PySet>>) -> PyResult<bool> {
+        Python::attach(|py| {
+            let mut converged = true;
+            for signal_state in self.pending.bind(py).iter() {
+                if signal_state.call_method0("commit")?.extract::<bool>()? {
+                    converged = false;
+                }
+            }
+
+            if let Some(changed) = changed {
+                // TODO: the update function should be added to Pyo3
+                // changed.bind(py).update(self.pending.bind(py));
+                changed
+                    .bind(py)
+                    .call_method1("update", (self.pending.bind(py),))?;
+            }
+
+            self.pending.bind(py).clear();
+            Ok(converged)
+        })
     }
 
     fn wait_interval(&mut self, process: Py<PyAny>, interval: Py<PyAny>) -> PyResult<()> {
