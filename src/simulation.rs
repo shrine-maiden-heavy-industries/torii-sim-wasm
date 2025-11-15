@@ -1,12 +1,35 @@
 use pyo3::{prelude::*, types::PyDict};
 
-use crate::memory::WASMInstance;
+use crate::memory::{WASMInstance, WASMValue};
+
+#[pyclass]
+pub struct WASMSignalState {
+    /// size of signal in bits
+    pub signal_size: u64,
+    pub curr: WASMValue,
+    pub next: WASMValue,
+    // TODO: pending
+    // TODO: waiters
+}
+
+#[pymethods]
+impl WASMSignalState {
+    #[new]
+    fn new(instance: &WASMInstance, index: usize, signal_size: u64, value: u64) -> Self {
+        Self {
+            signal_size,
+            curr: WASMValue::new(instance, signal_size, index * 2, value),
+            next: WASMValue::new(instance, signal_size, index * 2 + 1, value),
+        }
+    }
+}
 
 #[pyclass]
 pub struct WASMSimulation {
     #[pyo3(get)]
     pub timeline: Py<PyAny>,
     pub signals: Py<PyAny>,
+    pub slots: Vec<WASMSignalState>,
     pub memory: WASMInstance,
 }
 
@@ -17,6 +40,7 @@ impl WASMSimulation {
         Self {
             timeline,
             signals,
+            slots: Vec::new(),
             memory: WASMInstance::new(),
         }
     }
@@ -29,6 +53,12 @@ impl WASMSimulation {
             } else {
                 // assuming the error is always keyerror
                 let index = self.signals.bind(py).len()?;
+                self.slots.push(WASMSignalState::new(
+                    &self.memory,
+                    index,
+                    signal.bind(py).len()? as u64,
+                    signal.bind(py).getattr("reset")?.extract::<u64>()?,
+                ));
                 self.signals
                     .bind(py)
                     .set_item(signal.clone_ref(py), index)?;
