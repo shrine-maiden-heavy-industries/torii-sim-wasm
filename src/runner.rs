@@ -15,7 +15,8 @@ impl WASMRunner {
     #[new]
     fn new(src: &str, instance: Py<WASMSimulation>, callback: Py<PyAny>) -> Self {
         let runner = Python::attach(|py| {
-            let wasm = &mut instance.try_borrow_mut(py).unwrap().memory;
+            let instance = &mut instance.try_borrow_mut(py).unwrap();
+            let wasm = &mut instance.memory.lock().unwrap();
             let module = Module::new(wasm.store.engine(), src).unwrap();
 
             let py_callback = Func::wrap(
@@ -37,7 +38,13 @@ impl WASMRunner {
 
     fn __call__(&mut self) -> u64 {
         Python::attach(|py| {
-            let wasm = &mut self.instance.try_borrow_mut(py).unwrap().memory;
+            // the wasm callback needs to borrow the intance
+            // so we need to drop the instance ref before calling it
+            let instance = self.instance.borrow(py);
+            let store = instance.memory.clone();
+            drop(instance);
+
+            let mut wasm = store.lock().unwrap();
             self.runner.call(&mut wasm.store, ()).unwrap()
         })
     }

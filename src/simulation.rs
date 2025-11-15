@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use pyo3::{
     exceptions::PyValueError,
     prelude::*,
@@ -43,7 +45,9 @@ pub struct WASMSimulation {
     pub pending: Py<PySet>,
     pub signals: Py<PyAny>,
     pub slots: Vec<WASMSignalState>,
-    pub memory: WASMInstance,
+    // memory needs to be ArcMutex so we can have thread safe copies of
+    // without having to rely on python references
+    pub memory: Arc<Mutex<WASMInstance>>,
 }
 
 #[pymethods]
@@ -56,7 +60,7 @@ impl WASMSimulation {
             slots: Vec::new(),
             // TODO: return error instead of unwrap
             pending: PySet::empty(py).unwrap().into(),
-            memory: WASMInstance::new(),
+            memory: Arc::new(Mutex::new(WASMInstance::new())),
         })
     }
 
@@ -69,7 +73,7 @@ impl WASMSimulation {
                 // assuming the error is always keyerror
                 let index = self.signals.bind(py).len()?;
                 self.slots.push(WASMSignalState::new(
-                    &self.memory,
+                    &self.memory.lock().unwrap(),
                     index,
                     signal.bind(py).len()? as u64,
                     signal.bind(py).getattr("reset")?.extract::<u64>()?,
@@ -145,7 +149,8 @@ impl WASMSimulation {
         })
     }
 
-    fn set_slot(&mut self) -> PyResult<()> {
+    // TODO: remove this callback from WASMRunner and handle it inside WASMRunner
+    pub fn set_slot(&mut self, _index: u64, _value: u64) -> PyResult<()> {
         Ok(())
     }
 }
