@@ -36,6 +36,24 @@ impl WASMSignalState {
             next: WASMValue::new(instance, signal_size, index * 2 + 1, value),
         })
     }
+
+    fn set(&mut self, value: u64) -> PyResult<()> {
+        Python::attach(|py| {
+            self.next.set(value);
+            self.pending.bind(py).add(self.py_clone())?;
+            Ok(())
+        })
+    }
+
+    fn py_clone(&self) -> Self {
+        Python::attach(|py| Self {
+            curr: self.curr,
+            next: self.next,
+            signal_size: self.signal_size,
+            pending: self.pending.clone_ref(py),
+            waiters: self.waiters.clone_ref(py),
+        })
+    }
 }
 
 #[pyclass]
@@ -150,7 +168,8 @@ impl WASMSimulation {
     }
 
     // TODO: remove this callback from WASMRunner and handle it inside WASMRunner
-    pub fn set_slot(&mut self, _index: u64, _value: u64) -> PyResult<()> {
+    pub fn set_slot(&mut self, index: u64, value: u64) -> PyResult<()> {
+        self.slots[index as usize].set(value)?;
         Ok(())
     }
 }

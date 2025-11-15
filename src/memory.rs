@@ -31,6 +31,7 @@ impl WASMInstance {
 }
 
 #[pyclass]
+#[derive(Debug, Copy, Clone)]
 pub struct WASMValue {
     /// Pointer to the wasm value, unsafely as usize as *mut u8 makes pyo3 unhappy
     ptr: usize,
