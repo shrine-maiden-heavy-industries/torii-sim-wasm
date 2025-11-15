@@ -77,8 +77,12 @@ impl WASMSimulation {
         Ok(())
     }
 
-    fn wait_interval(&mut self, _process: Py<PyAny>, _signal: Py<PyAny>) -> PyResult<()> {
-        Ok(())
+    fn wait_interval(&mut self, process: Py<PyAny>, interval: Py<PyAny>) -> PyResult<()> {
+        Python::attach(|py| {
+            self.timeline
+                .call_method1(py, "delay", (interval, process))?;
+            Ok(())
+        })
     }
 
     #[pyo3(signature = (process, signal, *, trigger = None))]
