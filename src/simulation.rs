@@ -201,6 +201,21 @@ impl WASMSimulation {
         })
     }
 
+    fn remove_trigger(&mut self, process: Py<PyAny>, signal: Py<PyAny>) -> PyResult<()> {
+        let index = self.get_signal(signal)?;
+        Python::attach(|py| {
+            let waiters = self.slots[index].waiters.bind(py);
+            if waiters.get_item(process.clone_ref(py))?.is_none() {
+                return Err(PyErr::new::<PyValueError, _>(
+                    "Unable to remove trigger for process that's not in the slot list",
+                ));
+            }
+
+            waiters.del_item(process)?;
+            Ok(())
+        })
+    }
+
     // TODO: remove this callback from WASMRunner and handle it inside WASMRunner
     pub fn set_slot(&mut self, index: u64, value: u64) -> PyResult<()> {
         self.slots[index as usize].set(value)?;
