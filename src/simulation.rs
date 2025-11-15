@@ -127,6 +127,10 @@ impl WASMSimulation {
         })
     }
 
+    fn get_slot(&self, index: usize) -> WASMSignalState {
+        self.slots[index].py_clone()
+    }
+
     #[pyo3(signature = (changed = None))]
     fn commit(&mut self, changed: Option<Py<PySet>>) -> PyResult<bool> {
         Python::attach(|py| {
