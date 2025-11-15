@@ -12,7 +12,9 @@ use crate::memory::{WASMInstance, WASMValue};
 pub struct WASMSignalState {
     #[pyo3(get)]
     pub signal: Py<PyAny>,
+    #[pyo3(get)]
     pub curr: WASMValue,
+    #[pyo3(get)]
     pub next: WASMValue,
     pub waiters: Py<PyDict>,
     pub pending: Py<PySet>,
