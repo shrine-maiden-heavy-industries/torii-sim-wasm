@@ -10,8 +10,8 @@ use crate::memory::{WASMInstance, WASMValue};
 
 #[pyclass]
 pub struct WASMSignalState {
-    /// size of signal in bits
-    pub signal_size: u64,
+    #[pyo3(get)]
+    pub signal: Py<PyAny>,
     pub curr: WASMValue,
     pub next: WASMValue,
     pub waiters: Py<PyDict>,
@@ -24,16 +24,19 @@ impl WASMSignalState {
     fn new(
         instance: &WASMInstance,
         index: usize,
-        signal_size: u64,
-        value: u64,
+        signal: Py<PyAny>,
         pending: Py<PySet>,
-    ) -> Self {
-        Python::attach(|py| Self {
-            pending,
-            signal_size,
-            waiters: PyDict::new(py).into(),
-            curr: WASMValue::new(instance, signal_size, index * 2, value),
-            next: WASMValue::new(instance, signal_size, index * 2 + 1, value),
+    ) -> PyResult<Self> {
+        Python::attach(|py| {
+            let signal_size = signal.bind(py).len()? as u64;
+            let value = signal.bind(py).getattr("reset")?.extract::<u64>()?;
+            Ok(Self {
+                pending,
+                signal,
+                waiters: PyDict::new(py).into(),
+                curr: WASMValue::new(instance, signal_size, index * 2, value),
+                next: WASMValue::new(instance, signal_size, index * 2 + 1, value),
+            })
         })
     }
 
@@ -67,7 +70,7 @@ impl WASMSignalState {
         Python::attach(|py| Self {
             curr: self.curr,
             next: self.next,
-            signal_size: self.signal_size,
+            signal: self.signal.clone_ref(py),
             pending: self.pending.clone_ref(py),
             waiters: self.waiters.clone_ref(py),
         })
@@ -111,10 +114,9 @@ impl WASMSimulation {
                 self.slots.push(WASMSignalState::new(
                     &self.memory.lock().unwrap(),
                     index,
-                    signal.bind(py).len()? as u64,
-                    signal.bind(py).getattr("reset")?.extract::<u64>()?,
+                    signal.clone_ref(py),
                     self.pending.clone_ref(py),
-                ));
+                )?);
                 self.signals
                     .bind(py)
                     .set_item(signal.clone_ref(py), index)?;
