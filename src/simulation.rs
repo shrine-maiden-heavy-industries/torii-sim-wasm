@@ -50,6 +50,14 @@ impl WASMSignalState {
         })
     }
 
+    fn update(&mut self, value: u64) -> PyResult<()> {
+        if self.next.get() != value {
+            return self.set(value);
+        }
+
+        return Ok(());
+    }
+
     fn commit(&mut self) -> PyResult<bool> {
         if self.curr.get() == self.next.get() {
             return Ok(false);
