@@ -45,6 +45,24 @@ impl WASMSignalState {
         })
     }
 
+    fn commit(&mut self) -> PyResult<bool> {
+        if self.curr.get() == self.next.get() {
+            return Ok(false);
+        }
+
+        self.curr.set(self.next.get());
+        Python::attach(|py| {
+            let mut awoken_any = false;
+            for (process, trigger) in self.waiters.bind(py).iter() {
+                if trigger.is_none() || trigger.extract::<u64>()? == self.curr.get() {
+                    awoken_any = true;
+                    process.setattr("runnable", true)?;
+                }
+            }
+            Ok(awoken_any)
+        })
+    }
+
     fn py_clone(&self) -> Self {
         Python::attach(|py| Self {
             curr: self.curr,
