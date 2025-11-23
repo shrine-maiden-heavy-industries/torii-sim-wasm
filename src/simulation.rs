@@ -1,4 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use pyo3::{
     exceptions::PyValueError,
@@ -7,6 +10,94 @@ use pyo3::{
 };
 
 use crate::memory::{WASMInstance, WASMValue};
+
+#[pyclass]
+pub struct WASMTimeline {
+    #[pyo3(get)]
+    pub now: f64,
+    /// isize is the hash value of Python object
+    pub deadlines: HashMap<isize, (f64, Py<PyAny>)>,
+}
+
+#[pymethods]
+impl WASMTimeline {
+    #[new]
+    fn new() -> Self {
+        Self {
+            now: 0.0,
+            deadlines: HashMap::new(),
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.now = 0.0;
+        self.deadlines.clear();
+    }
+
+    pub fn at(&mut self, run_at: f64, process: Py<PyAny>) -> PyResult<()> {
+        Python::attach(|py| {
+            let hash = process.bind(py).hash()?;
+            if self.deadlines.contains_key(&hash) {
+                return Err(PyValueError::new_err("Process already in deadline list"));
+            }
+
+            // deadlines.set_item(process, run_at)?;
+            self.deadlines.insert(hash, (run_at, process));
+            Ok(())
+        })
+    }
+
+    pub fn delay(&mut self, delay_by: Option<f64>, process: Py<PyAny>) -> PyResult<()> {
+        let run_at = if let Some(delay_by) = delay_by {
+            self.now + delay_by
+        } else {
+            self.now
+        };
+
+        self.at(run_at, process)
+    }
+
+    pub fn advance(&mut self) -> PyResult<bool> {
+        let mut nearest_processes: HashMap<isize, Py<PyAny>> = HashMap::new();
+        let mut nearest_deadline: Option<f64> = None;
+
+        for (hash, (deadline, process)) in self.deadlines.iter() {
+            if nearest_deadline.is_none_or(|nd| *deadline <= nd) {
+                if *deadline < self.now {
+                    return Err(PyValueError::new_err(
+                        "Deadline of is behind our current state",
+                    ));
+                }
+
+                if nearest_deadline.is_some_and(|nd| *deadline < nd) {
+                    nearest_processes.clear();
+                }
+
+                // nearest_processes.insert(*process);
+                Python::attach(|py| {
+                    nearest_processes.insert(*hash, process.clone_ref(py));
+                });
+                nearest_deadline = Some(*deadline);
+            }
+        }
+
+        if nearest_processes.is_empty() {
+            return Ok(false);
+        }
+
+        Python::attach(|py| {
+            for (hash, process) in nearest_processes {
+                process.bind(py).setattr("runnable", true)?;
+                self.deadlines.remove(&hash);
+            }
+
+            // NOTE: this is either a bug or the original python is doing something that it shouldn't
+            // so it's important that we catch the unwrap if neares_deadline is actually none here
+            self.now = nearest_deadline.unwrap();
+            Ok(true)
+        })
+    }
+}
 
 #[pyclass]
 pub struct WASMSignalState {
@@ -90,7 +181,7 @@ impl WASMSignalState {
 #[pyclass]
 pub struct WASMSimulation {
     #[pyo3(get)]
-    pub timeline: Py<PyAny>,
+    pub timeline: Py<WASMTimeline>,
     pub pending: Py<PySet>,
     pub signals: Py<PyAny>,
     pub slots: Vec<WASMSignalState>,
@@ -102,9 +193,9 @@ pub struct WASMSimulation {
 #[pymethods]
 impl WASMSimulation {
     #[new]
-    fn new(timeline: Py<PyAny>, signals: Py<PyAny>) -> Self {
+    fn new(signals: Py<PyAny>) -> Self {
         Python::attach(|py| Self {
-            timeline,
+            timeline: WASMTimeline::new().into_pyobject(py).unwrap().unbind(),
             signals,
             slots: Vec::new(),
             // TODO: return error instead of unwrap
@@ -162,10 +253,9 @@ impl WASMSimulation {
         })
     }
 
-    fn wait_interval(&mut self, process: Py<PyAny>, interval: Py<PyAny>) -> PyResult<()> {
+    fn wait_interval(&mut self, process: Py<PyAny>, interval: Option<f64>) -> PyResult<()> {
         Python::attach(|py| {
-            self.timeline
-                .call_method1(py, "delay", (interval, process))?;
+            self.timeline.borrow_mut(py).delay(interval, process)?;
             Ok(())
         })
     }
