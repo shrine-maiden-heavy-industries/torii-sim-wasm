@@ -4,8 +4,8 @@ use std::path::PathBuf;
 
 use pyo3::prelude::*;
 
-#[pyclass(eq, eq_int)]
-#[derive(PartialEq, Clone)]
+#[pyclass(from_py_object, eq, eq_int)]
+#[derive(PartialEq, Clone, Copy)]
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 pub enum Backend {
     WINCH,
@@ -21,8 +21,8 @@ impl From<::wasmtime::Strategy> for Backend {
     }
 }
 
-#[pyclass(eq, eq_int)]
-#[derive(PartialEq, Clone)]
+#[pyclass(from_py_object, eq, eq_int)]
+#[derive(PartialEq, Clone, Copy)]
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 pub enum OptLevel {
     NONE,
@@ -41,8 +41,8 @@ impl From<::wasmtime::OptLevel> for OptLevel {
     }
 }
 
-#[pyclass(eq, eq_int)]
-#[derive(PartialEq, Clone)]
+#[pyclass(from_py_object, eq, eq_int)]
+#[derive(PartialEq, Clone, Copy)]
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 pub enum Profiler {
     NONE,
@@ -61,7 +61,7 @@ impl From<::wasmtime::ProfilingStrategy> for Profiler {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct WASMConfig {
     backend: Backend,
