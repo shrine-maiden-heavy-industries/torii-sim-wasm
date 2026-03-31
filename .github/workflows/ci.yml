@@ -169,6 +169,8 @@ jobs:
             target: armv7
           - runner: ubuntu-22.04
             target: ppc64le
+          - runner: ubuntu-22.04
+            target: s390x
 
     name: 'Build Torii WASM Simulation Engine (${{ matrix.platform.runner }} ${{ matrix.platform.target }})'
     steps:
@@ -249,8 +251,13 @@ jobs:
         platform:
           - runner: windows-latest
             target: x64
+            pyarch: x64
           - runner: windows-latest
             target: x86
+            pyarch: x86
+          - runner: windows-11-arm
+            target: aarch64
+            pyarch: arm64
 
     name: 'Build Torii WASM Simulation Engine (${{ matrix.platform.runner }} ${{ matrix.platform.target }})'
     steps:
@@ -263,7 +270,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.TOOL_PYTHON_VERSION }}
-          architecture: ${{ matrix.platform.target }}
+          architecture: ${{ matrix.platform.pyarch }}
 
       - name: 'Build wheels'
         uses: PyO3/maturin-action@v1
@@ -286,9 +293,9 @@ jobs:
     strategy:
       matrix:
         platform:
-          - runner: macos-13
+          - runner: macos-15-intel
             target: x86_64
-          - runner: macos-14
+          - runner: macos-latest
             target: aarch64
 
     name: 'Build Torii WASM Simulation Engine (${{ matrix.platform.runner }} ${{ matrix.platform.target }})'
