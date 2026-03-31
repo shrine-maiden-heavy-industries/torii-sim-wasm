@@ -27,7 +27,7 @@ impl WASMRunner {
                 },
             );
 
-            let imports = [wasm.memory.into(), py_callback.into()];
+            let imports = [wasm.memory.clone().into(), py_callback.into()];
             let inst = Instance::new(&mut wasm.store, &module, &imports).unwrap();
             inst.get_typed_func(&mut wasm.store, "run").unwrap()
         });

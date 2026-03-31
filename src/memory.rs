@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 use pyo3::prelude::*;
-use wasmtime::{Engine, Memory, MemoryTypeBuilder, Store};
+use wasmtime::{Engine, MemoryTypeBuilder, SharedMemory, Store};
 
 use crate::config::WASMConfig;
 
 #[pyclass]
 pub struct WASMInstance {
-    pub memory: Memory,
+    pub memory: SharedMemory,
     pub store: Store<()>,
 }
 
@@ -28,7 +28,7 @@ impl WASMInstance {
             .max(Some(2))
             .build()
             .unwrap();
-        let memory = Memory::new(&mut store, mem_type).unwrap();
+        let memory = SharedMemory::new(&engine, mem_type).unwrap();
         Self { memory, store }
     }
 }
@@ -45,7 +45,7 @@ pub struct WASMValue {
 impl WASMValue {
     #[new]
     pub fn new(instance: &WASMInstance, length: u64, offset: usize, value: u64) -> Self {
-        let ptr = unsafe { instance.memory.data_ptr(&instance.store).add(offset * 8) as usize };
+        let ptr = unsafe { instance.memory.data().as_ptr().add(offset * 8) as usize };
         let new = Self { ptr, length };
         new.set(value);
         new

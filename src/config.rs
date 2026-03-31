@@ -121,6 +121,7 @@ impl From<WASMConfig> for ::wasmtime::Config {
         ::wasmtime::Config::new()
             .max_wasm_stack(value.max_stack)
             .wasm_memory64(true)
+            .shared_memory(true)
             .strategy(match value.backend {
                 Backend::WINCH => ::wasmtime::Strategy::Winch,
                 Backend::CRANELIFT => ::wasmtime::Strategy::Cranelift,
