@@ -13,7 +13,7 @@ license-files = ['LICENSE', 'LICENSE.docs']
 readme = 'README.md'
 requires-python = '>=3.11'
 dependencies = [
-    'torii>=0.8.0,<1.0',
+    'torii>=1.0.0a,<2.0',
     # NOTE(aki): Version constrained by `torii`
     'pyvcd'
 ]

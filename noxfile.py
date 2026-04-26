@@ -33,7 +33,9 @@ def test(session: Session) -> None:
 
 	unittest_args = ('-m', 'unittest', 'discover', '-s', str(ROOT_DIR / 'python'))
 
-	session.install('-e', '.')
+	# TODO(aki): Removed once we can rely on the Torii version in PyPi
+	session.install('git+https://github.com/shrine-maiden-heavy-industries/torii-hdl.git')
+	session.install('--pre', '-e', '.')
 
 	if ENABLE_COVERAGE:
 		session.log('Coverage support enabled')
@@ -63,7 +65,9 @@ def typecheck_mypy(session: Session) -> None:
 
 	session.install('mypy')
 	session.install('lxml')
-	session.install('-e', '.')
+	# TODO(aki): Removed once we can rely on the Torii version in PyPi
+	session.install('git+https://github.com/shrine-maiden-heavy-industries/torii-hdl.git')
+	session.install('--pre', '-e', '.')
 
 	session.run(
 		'mypy', '--non-interactive', '--install-types', '--pretty',
@@ -79,7 +83,9 @@ def typecheck_pyright(session: Session) -> None:
 
 	session.install('pyright')
 	session.install('types-Pygments', 'types-setuptools')
-	session.install('-e', '.')
+	# TODO(aki): Removed once we can rely on the Torii version in PyPi
+	session.install('git+https://github.com/shrine-maiden-heavy-industries/torii-hdl.git')
+	session.install('--pre', '-e', '.')
 
 	with (OUTPUT_DIR / 'pyright.log').open('w') as f:
 		session.run('pyright', *session.posargs, stdout = f)
